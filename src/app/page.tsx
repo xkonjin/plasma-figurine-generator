@@ -1,65 +1,170 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useCallback } from "react";
+import { Header } from "@/components/Header";
+import { UploadSection } from "@/components/UploadSection";
+import { PromptSection } from "@/components/PromptSection";
+import { GenerationPreview } from "@/components/GenerationPreview";
+import { GallerySection } from "@/components/GallerySection";
 
 export default function Home() {
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [name, setName] = useState("");
+  const [activity, setActivity] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savedToGallery, setSavedToGallery] = useState(false);
+
+  const handleImageUpload = useCallback((file: File) => {
+    setUploadedFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUploadedImage(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    setError(null);
+    setSavedToGallery(false);
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!uploadedImage) {
+      setError("Please upload a photo first");
+      return;
+    }
+    if (!name.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    setGeneratedImages([]);
+    setSavedToGallery(false);
+
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image: uploadedImage,
+          name: name.trim(),
+          activity: activity || "working at a laptop",
+          customPrompt: customPrompt.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Generation failed");
+      }
+
+      if (data.images && data.images.length > 0) {
+        setGeneratedImages(data.images);
+      } else {
+        throw new Error("No images generated");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleSaveToGallery = async (imageUrl: string) => {
+    try {
+      const response = await fetch("/api/gallery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          activity,
+          imageUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save to gallery");
+      }
+
+      setSavedToGallery(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save");
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    <main className="min-h-screen pb-20">
+      <Header />
+      
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          {/* Left Column - Upload & Settings */}
+          <div className="space-y-6">
+            <UploadSection
+              uploadedImage={uploadedImage}
+              onImageUpload={handleImageUpload}
+              onClear={() => {
+                setUploadedImage(null);
+                setUploadedFile(null);
+                setGeneratedImages([]);
+                setSavedToGallery(false);
+              }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            
+            <PromptSection
+              name={name}
+              setName={setName}
+              activity={activity}
+              setActivity={setActivity}
+              customPrompt={customPrompt}
+              setCustomPrompt={setCustomPrompt}
+            />
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating || !uploadedImage}
+              className={`w-full py-4 px-6 rounded-xl font-medium text-white transition-all ${
+                isGenerating || !uploadedImage
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "plasma-green hover:opacity-90 hover:scale-[1.02]"
+              } ${isGenerating ? "generating" : ""}`}
+            >
+              {isGenerating ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Generating your figurine...
+                </span>
+              ) : (
+                "Generate Figurine"
+              )}
+            </button>
+          </div>
+
+          {/* Right Column - Preview */}
+          <GenerationPreview
+            generatedImages={generatedImages}
+            isGenerating={isGenerating}
+            onSaveToGallery={handleSaveToGallery}
+            savedToGallery={savedToGallery}
+          />
         </div>
-      </main>
-    </div>
+
+        {/* Gallery Section */}
+        <GallerySection />
+      </div>
+    </main>
   );
 }
