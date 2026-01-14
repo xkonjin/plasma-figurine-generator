@@ -180,34 +180,32 @@ export async function POST(request: NextRequest) {
       customPrompt || ""
     );
 
-    // Build request with BOTH images: user photo AND Plasma logo
+    // Build request with user photo and Plasma logo
     const requestBody = {
       contents: [
         {
           parts: [
-            // First image: User's photo
+            // User's photo
             {
               inlineData: {
                 mimeType,
                 data: imageData,
               },
             },
-            {
-              text: `IMAGE 1: This is a photo of ${name || "the person"}. Use their likeness (face, hair, skin tone, general appearance) for the figurine.`,
-            },
-            // Second image: Plasma logo
+            // Plasma logo reference
             {
               inlineData: {
                 mimeType: "image/png",
                 data: PLASMA_LOGO_BASE64,
               },
             },
+            // Combined prompt
             {
-              text: `IMAGE 2: This is the Plasma logo - a white spiral/helix shape on dark green. You MUST use this EXACT spiral design where specified in the prompt. Study its shape carefully - it spirals inward with curved lines.`,
-            },
-            // Main prompt
-            {
-              text: prompt,
+              text: `REFERENCE IMAGES:
+1. First image: Photo of ${name || "the person"} - use their face, hair, skin tone for the figurine
+2. Second image: The Plasma logo - a white spiral on dark green. USE THIS EXACT SPIRAL SHAPE.
+
+${prompt}`,
             },
           ],
         },
