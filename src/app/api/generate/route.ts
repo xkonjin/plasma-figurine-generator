@@ -107,10 +107,6 @@ function buildPrompt(
 
   const basePrompt = `Create a miniature, full-body, isometric, hyper-realistic 3D collectible figurine of this person.
 
-REFERENCE IMAGES PROVIDED:
-1. FIRST IMAGE: Photo of the person - use their face, hair, and general appearance for the figurine
-2. SECOND IMAGE: The Plasma logo - a white spiral/helix design on dark green. This EXACT spiral shape must be used.
-
 POSE & ACTIVITY: ${activity}
 
 FIGURINE STYLE:
@@ -129,12 +125,8 @@ OUTFIT:
 
 ${placement.instruction}
 
-CRITICAL LOGO REQUIREMENTS:
-- The spiral MUST match the exact shape from the second reference image
-- It's a spiral/helix that curves inward toward a center point (like a stylized tornado or whirlpool from above)
-- Do NOT create a generic swirl or random curved lines
-- The spiral has approximately 3-4 rotations tapering to center
-- Render it precisely as shown in the reference
+PLASMA LOGO DESCRIPTION (for the branding element):
+The Plasma logo is a precise geometric spiral shape. It looks like a stylized hurricane or whirlpool viewed from above - a clean logarithmic spiral that curves elegantly from outer edge to inner center point. The spiral has approximately 3-4 smooth rotations, tapering gradually as it approaches the center. Think of a perfectly geometric Fibonacci spiral or a nautilus shell cross-section. The spiral should be rendered in WHITE or gold/brass/silver depending on the material context. Do NOT make a generic swirl with random curves - this is a precise, mathematical spiral shape.
 
 MOOD: Warm, approachable, confident - someone who genuinely enjoys their work.
 
@@ -180,7 +172,7 @@ export async function POST(request: NextRequest) {
       customPrompt || ""
     );
 
-    // Build request with user photo and Plasma logo
+    // Build request with user photo AND Plasma logo
     const requestBody = {
       contents: [
         {
@@ -192,18 +184,18 @@ export async function POST(request: NextRequest) {
                 data: imageData,
               },
             },
-            // Plasma logo reference
+            // Plasma logo reference image
             {
               inlineData: {
                 mimeType: "image/png",
                 data: PLASMA_LOGO_BASE64,
               },
             },
-            // Combined prompt
+            // Prompt with instructions
             {
-              text: `REFERENCE IMAGES:
-1. First image: Photo of ${name || "the person"} - use their face, hair, skin tone for the figurine
-2. Second image: The Plasma logo - a white spiral on dark green. USE THIS EXACT SPIRAL SHAPE.
+              text: `TWO REFERENCE IMAGES PROVIDED:
+1. FIRST IMAGE: Photo of ${name || "the person"} - use their exact face, hair, and skin tone for the figurine
+2. SECOND IMAGE: The Plasma logo - a white spiral on dark green. Use THIS EXACT SPIRAL SHAPE for any logo/branding elements.
 
 ${prompt}`,
             },
@@ -215,7 +207,13 @@ ${prompt}`,
       },
     };
 
+    // Log request size for debugging
+    const userImageSize = imageData.length;
+    const logoImageSize = PLASMA_LOGO_BASE64.length;
     console.log(`Generating figurine with logo placement: ${placementName}`);
+    console.log(`User image base64 size: ${userImageSize} chars`);
+    console.log(`Logo image base64 size: ${logoImageSize} chars`);
+    console.log(`Total payload approximate size: ${JSON.stringify(requestBody).length} chars`);
 
     const response = await fetch(GEMINI_API_URL, {
       method: "POST",
