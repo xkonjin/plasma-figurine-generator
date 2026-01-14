@@ -4,7 +4,8 @@ import Resend from "next-auth/providers/resend";
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Resend({
-      from: "Plasma Figurines <figurines@plasma.to>",
+      // Use Resend's default sender or your verified domain
+      from: process.env.EMAIL_FROM || "Plasma Figurines <onboarding@resend.dev>",
     }),
   ],
   callbacks: {
