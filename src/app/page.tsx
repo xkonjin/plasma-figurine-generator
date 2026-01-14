@@ -17,6 +17,7 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedToGallery, setSavedToGallery] = useState(false);
+  const [galleryRefreshKey, setGalleryRefreshKey] = useState(0);
 
   const handleImageUpload = useCallback((file: File) => {
     setUploadedFile(file);
@@ -91,6 +92,7 @@ export default function Home() {
       }
 
       setSavedToGallery(true);
+      setGalleryRefreshKey(prev => prev + 1); // Trigger gallery refresh
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
     }
@@ -163,7 +165,7 @@ export default function Home() {
         </div>
 
         {/* Gallery Section */}
-        <GallerySection />
+        <GallerySection key={galleryRefreshKey} />
       </div>
     </main>
   );

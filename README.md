@@ -2,12 +2,12 @@
 
 Create personalized isometric miniature figurines with Plasma branding. Upload your photo, customize the pose, and generate high-quality figurines to download and share.
 
-![Plasma Figurine Generator](https://plasma.to/brand-assets/logo-dark.png)
+**Live Demo:** https://plasma-figurine-generator.vercel.app
 
 ## Features
 
 - **Photo-to-Figurine**: Upload your photo and AI generates a personalized isometric figurine
-- **Custom Activities**: Choose from preset activities or describe your own pose
+- **Custom Activities**: Choose from 16 preset activities or describe your own pose
 - **Plasma Branding**: Subtle British Racing Green styling with Plasma logo elements
 - **Team Gallery**: Save and browse figurines created by the team
 - **High Quality**: 1024x1024 PNG images perfect for profiles and sharing
@@ -17,8 +17,8 @@ Create personalized isometric miniature figurines with Plasma branding. Upload y
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/plasma/figurine-generator.git
-cd figurine-generator
+git clone <your-repo-url>
+cd plasma-figurine-generator
 npm install
 ```
 
@@ -29,10 +29,6 @@ Create a `.env.local` file:
 ```bash
 # Google AI Studio API Key (required)
 GEMINI_API_KEY=your_api_key_here
-
-# Vercel KV (optional - for persistent gallery)
-KV_REST_API_URL=your_kv_url
-KV_REST_API_TOKEN=your_kv_token
 ```
 
 Get your Gemini API key at: https://aistudio.google.com/apikey
@@ -56,26 +52,52 @@ Open http://localhost:3000
 1. Push to GitHub
 2. Import to Vercel: https://vercel.com/new
 3. Add environment variable: `GEMINI_API_KEY`
-4. (Optional) Add Vercel KV for persistent gallery storage
+4. Deploy!
+
+## Adding Persistent Gallery Storage (Optional)
+
+The gallery works in-memory by default. For persistent storage across deployments, add Upstash Redis:
+
+### Option 1: Via Vercel Dashboard (Easiest)
+
+1. Go to your Vercel project dashboard
+2. Navigate to **Storage** tab
+3. Click **Browse Marketplace** → Search "Upstash"
+4. Select **Upstash for Redis** → **Add Integration**
+5. Follow prompts to create a free database
+6. Environment variables are automatically added
+
+### Option 2: Via Upstash Console
+
+1. Sign up at https://console.upstash.com
+2. Create a new Redis database (free tier available)
+3. Copy the REST URL and Token
+4. Add to Vercel environment variables:
+   - `KV_REST_API_URL` = Your Upstash REST URL
+   - `KV_REST_API_TOKEN` = Your Upstash REST Token
+
+### Option 3: Via CLI
+
+```bash
+# Install Upstash CLI
+npm install -g @upstash/cli
+
+# Login
+upstash auth login --email your@email.com
+
+# Create database
+upstash redis create figurines-gallery --region us-east-1
+
+# Copy the credentials and add to Vercel
+```
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `GEMINI_API_KEY` | Yes | Google AI Studio API key for Gemini 2.5 Flash Image |
-| `KV_REST_API_URL` | No | Vercel KV URL (auto-set when adding KV) |
-| `KV_REST_API_TOKEN` | No | Vercel KV token (auto-set when adding KV) |
-
-## Adding Vercel KV (Optional)
-
-For persistent gallery storage across deployments:
-
-1. Go to your Vercel project dashboard
-2. Navigate to **Storage** tab
-3. Click **Create Database** → **KV**
-4. Follow the prompts to connect
-
-The environment variables will be automatically added to your project.
+| `KV_REST_API_URL` | No | Upstash Redis REST URL (for persistent gallery) |
+| `KV_REST_API_TOKEN` | No | Upstash Redis REST token (for persistent gallery) |
 
 ## API Endpoints
 
@@ -108,30 +130,53 @@ Fetch all saved figurines.
 
 Save a figurine to the gallery.
 
-**Request Body:**
-```json
-{
-  "name": "John Doe",
-  "activity": "working",
-  "imageUrl": "data:image/png;base64,..."
-}
-```
-
 ## Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
 - **Styling**: Tailwind CSS
 - **AI**: Google Gemini 2.5 Flash Image (Nano Banana)
-- **Storage**: Vercel KV (optional)
+- **Storage**: Upstash Redis (optional)
 - **Deployment**: Vercel
 
 ## Brand Colors
 
-The figurines use Plasma's brand colors:
+The figurines use Plasma's brand colors from [plasma.to/brand](https://plasma.to/brand):
 
 - **British Racing Green**: #162F29 (primary)
 - **Light Green**: #DCEFEA (background)
 - **Accent**: #295B4F (secondary)
+
+## Customization
+
+### Adding More Activities
+
+Edit `src/components/PromptSection.tsx` and add to the `PRESET_ACTIVITIES` array:
+
+```typescript
+const PRESET_ACTIVITIES = [
+  { value: "your custom activity", label: "Label", emoji: "🎯" },
+  // ...
+];
+```
+
+### Modifying the Prompt
+
+Edit `src/app/api/generate/route.ts` to customize the generation prompt, outfit descriptions, or branding elements.
+
+## Troubleshooting
+
+### "No image generated"
+- Check your Gemini API key is valid
+- Try a different photo or activity
+- Some content may be blocked by safety filters
+
+### Gallery not persisting
+- Add Upstash Redis for persistent storage
+- Without Redis, gallery resets on each deployment
+
+### Generation taking too long
+- Gemini image generation typically takes 10-30 seconds
+- Function timeout is set to 60 seconds
 
 ## License
 
