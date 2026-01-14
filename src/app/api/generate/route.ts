@@ -127,8 +127,20 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Gemini API error:", response.status, errorText);
+      
+      // Try to parse error for more details
+      let errorMessage = `Generation failed: ${response.status}`;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error?.message) {
+          errorMessage = errorJson.error.message;
+        }
+      } catch {
+        // Use default message
+      }
+      
       return NextResponse.json(
-        { error: `Generation failed: ${response.status}` },
+        { error: errorMessage, details: errorText.substring(0, 500) },
         { status: response.status }
       );
     }
