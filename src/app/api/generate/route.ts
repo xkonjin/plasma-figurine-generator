@@ -78,8 +78,6 @@ export async function POST(request: NextRequest) {
 
     const mimeType = `image/${base64Match[1]}`;
     const imageData = base64Match[2];
-    
-    console.log("Processing image:", { mimeType, imageDataLength: imageData.length });
 
     const prompt = buildPrompt(
       activity || "working at a laptop",
@@ -108,12 +106,6 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    console.log("Sending request to Gemini:", { 
-      url: GEMINI_API_URL, 
-      partsCount: requestBody.contents[0].parts.length,
-      apiKeyPresent: !!GEMINI_API_KEY
-    });
-    
     const response = await fetch(GEMINI_API_URL, {
       method: "POST",
       headers: { 
