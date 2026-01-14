@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { trackServerEvent } from "@/lib/posthog-server";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL =
@@ -6,6 +7,26 @@ const GEMINI_API_URL =
 
 // Plasma brand colors
 const PLASMA_GREEN = "#162F29";
+
+// Helper to fetch logo and convert to base64 at runtime
+async function fetchLogoAsBase64(): Promise<string> {
+  try {
+    // Use absolute URL for the logo
+    const logoUrl = "https://plasma-figurine-generator.vercel.app/plasma-logo.png";
+    const response = await fetch(logoUrl);
+    if (!response.ok) {
+      console.error("Failed to fetch logo:", response.status);
+      return "";
+    }
+    const buffer = await response.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    console.log(`Fetched logo from URL, base64 length: ${base64.length}`);
+    return base64;
+  } catch (error) {
+    console.error("Error fetching logo:", error);
+    return "";
+  }
+}
 
 // Plasma logo as base64 PNG (166x166, white spiral on dark green)
 const PLASMA_LOGO_BASE64 =
@@ -172,30 +193,19 @@ export async function POST(request: NextRequest) {
       customPrompt || ""
     );
 
-    // Build request with user photo AND Plasma logo
+    // Build simple single-image request
     const requestBody = {
       contents: [
         {
           parts: [
-            // User's photo
             {
               inlineData: {
                 mimeType,
                 data: imageData,
               },
             },
-            // Plasma logo reference image
             {
-              inlineData: {
-                mimeType: "image/png",
-                data: PLASMA_LOGO_BASE64,
-              },
-            },
-            // Prompt with instructions
-            {
-              text: `TWO REFERENCE IMAGES PROVIDED:
-1. FIRST IMAGE: Photo of ${name || "the person"} - use their exact face, hair, and skin tone for the figurine
-2. SECOND IMAGE: The Plasma logo - a white spiral on dark green. Use THIS EXACT SPIRAL SHAPE for any logo/branding elements.
+              text: `REFERENCE IMAGE: Photo of ${name || "the person"} - use their exact face, hair, and skin tone for the figurine.
 
 ${prompt}`,
             },
@@ -208,12 +218,8 @@ ${prompt}`,
     };
 
     // Log request size for debugging
-    const userImageSize = imageData.length;
-    const logoImageSize = PLASMA_LOGO_BASE64.length;
     console.log(`Generating figurine with logo placement: ${placementName}`);
-    console.log(`User image base64 size: ${userImageSize} chars`);
-    console.log(`Logo image base64 size: ${logoImageSize} chars`);
-    console.log(`Total payload approximate size: ${JSON.stringify(requestBody).length} chars`);
+    console.log(`User image base64 size: ${imageData.length} chars`);
 
     const response = await fetch(GEMINI_API_URL, {
       method: "POST",
@@ -262,16 +268,31 @@ ${prompt}`,
 
     if (images.length === 0) {
       if (data.promptFeedback?.blockReason) {
+        await trackServerEvent(name || "anonymous", "figurine_generation_blocked", {
+          reason: data.promptFeedback.blockReason,
+          activity,
+        });
         return NextResponse.json(
           { error: `Content blocked: ${data.promptFeedback.blockReason}` },
           { status: 400 }
         );
       }
+      await trackServerEvent(name || "anonymous", "figurine_generation_failed", {
+        reason: "no_image_generated",
+        activity,
+      });
       return NextResponse.json(
         { error: "No image generated. Try a different prompt or photo." },
         { status: 500 }
       );
     }
+
+    // Track successful generation
+    await trackServerEvent(name || "anonymous", "figurine_generated", {
+      activity,
+      logoPlacement: placementName,
+      imagesCount: images.length,
+    });
 
     return NextResponse.json({ 
       images,
@@ -279,6 +300,9 @@ ${prompt}`,
     });
   } catch (error) {
     console.error("Generation error:", error);
+    await trackServerEvent("system", "figurine_generation_error", {
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }
