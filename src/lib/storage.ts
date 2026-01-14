@@ -1,5 +1,5 @@
 // Simple storage abstraction that works with multiple backends
-// Priority: Upstash Redis > Vercel KV > In-memory
+// Priority: Upstash Redis > Vercel Blob > In-memory
 
 interface StorageClient {
   get<T>(key: string): Promise<T | null>;
@@ -36,20 +36,40 @@ class UpstashStorage implements StorageClient {
   }
 }
 
-// Vercel KV storage
-class VercelKVStorage implements StorageClient {
-  private kv: any;
-
-  constructor(kv: any) {
-    this.kv = kv;
-  }
-
+// Vercel Blob storage (stores JSON files)
+class BlobStorage implements StorageClient {
   async get<T>(key: string): Promise<T | null> {
-    return await this.kv.get(key);
+    try {
+      const { list, head } = await import("@vercel/blob");
+      const { blobs } = await list({ prefix: `${key}.json` });
+      if (blobs.length === 0) return null;
+      
+      const response = await fetch(blobs[0].url);
+      if (!response.ok) return null;
+      return await response.json();
+    } catch {
+      return null;
+    }
   }
 
   async set<T>(key: string, value: T): Promise<void> {
-    await this.kv.set(key, value);
+    const { put, del, list } = await import("@vercel/blob");
+    
+    // Delete old blob if exists
+    try {
+      const { blobs } = await list({ prefix: `${key}.json` });
+      for (const blob of blobs) {
+        await del(blob.url);
+      }
+    } catch {
+      // Ignore deletion errors
+    }
+    
+    // Upload new blob
+    await put(`${key}.json`, JSON.stringify(value), {
+      access: "public",
+      contentType: "application/json",
+    });
   }
 }
 
@@ -76,15 +96,14 @@ export async function getStorage(): Promise<StorageClient> {
     }
   }
 
-  // Try Vercel KV
-  if (process.env.KV_URL) {
+  // Try Vercel Blob
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
     try {
-      const { kv } = await import("@vercel/kv");
-      storageClient = new VercelKVStorage(kv);
-      console.log("Using Vercel KV storage");
+      storageClient = new BlobStorage();
+      console.log("Using Vercel Blob storage");
       return storageClient;
     } catch (e) {
-      console.log("Vercel KV not available:", e);
+      console.log("Vercel Blob not available:", e);
     }
   }
 
