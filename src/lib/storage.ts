@@ -1,5 +1,5 @@
 // Simple storage abstraction that works with multiple backends
-// Priority: Upstash Redis > Vercel Blob > In-memory
+// Priority: Supabase > Upstash Redis > In-memory
 
 interface StorageClient {
   get<T>(key: string): Promise<T | null>;
@@ -16,6 +16,33 @@ class MemoryStorage implements StorageClient {
 
   async set<T>(key: string, value: T): Promise<void> {
     memoryStore.set(key, value);
+  }
+}
+
+// Supabase storage (uses key-value table)
+class SupabaseStorage implements StorageClient {
+  private supabase: any;
+
+  constructor(supabase: any) {
+    this.supabase = supabase;
+  }
+
+  async get<T>(key: string): Promise<T | null> {
+    const { data, error } = await this.supabase
+      .from("figurine_kv")
+      .select("value")
+      .eq("key", key)
+      .single();
+
+    if (error || !data) return null;
+    return data.value as T;
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    await this.supabase.from("figurine_kv").upsert(
+      { key, value, updated_at: new Date().toISOString() },
+      { onConflict: "key" }
+    );
   }
 }
 
@@ -36,43 +63,6 @@ class UpstashStorage implements StorageClient {
   }
 }
 
-// Vercel Blob storage (stores JSON files)
-class BlobStorage implements StorageClient {
-  async get<T>(key: string): Promise<T | null> {
-    try {
-      const { list, head } = await import("@vercel/blob");
-      const { blobs } = await list({ prefix: `${key}.json` });
-      if (blobs.length === 0) return null;
-      
-      const response = await fetch(blobs[0].url);
-      if (!response.ok) return null;
-      return await response.json();
-    } catch {
-      return null;
-    }
-  }
-
-  async set<T>(key: string, value: T): Promise<void> {
-    const { put, del, list } = await import("@vercel/blob");
-    
-    // Delete old blob if exists
-    try {
-      const { blobs } = await list({ prefix: `${key}.json` });
-      for (const blob of blobs) {
-        await del(blob.url);
-      }
-    } catch {
-      // Ignore deletion errors
-    }
-    
-    // Upload new blob
-    await put(`${key}.json`, JSON.stringify(value), {
-      access: "public",
-      contentType: "application/json",
-    });
-  }
-}
-
 let storageClient: StorageClient | null = null;
 
 export async function getStorage(): Promise<StorageClient> {
@@ -80,7 +70,23 @@ export async function getStorage(): Promise<StorageClient> {
     return storageClient;
   }
 
-  // Try Upstash Redis first
+  // Try Supabase first
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_KEY) {
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(
+        process.env.SUPABASE_URL,
+        process.env.SUPABASE_KEY
+      );
+      storageClient = new SupabaseStorage(supabase);
+      console.log("Using Supabase storage");
+      return storageClient;
+    } catch (e) {
+      console.log("Supabase not available:", e);
+    }
+  }
+
+  // Try Upstash Redis
   if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
     try {
       const { Redis } = await import("@upstash/redis");
@@ -93,17 +99,6 @@ export async function getStorage(): Promise<StorageClient> {
       return storageClient;
     } catch (e) {
       console.log("Upstash Redis not available:", e);
-    }
-  }
-
-  // Try Vercel Blob
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    try {
-      storageClient = new BlobStorage();
-      console.log("Using Vercel Blob storage");
-      return storageClient;
-    } catch (e) {
-      console.log("Vercel Blob not available:", e);
     }
   }
 
