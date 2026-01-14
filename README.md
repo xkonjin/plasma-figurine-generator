@@ -11,6 +11,7 @@ Create personalized isometric miniature figurines with Plasma branding. Upload y
 - **Plasma Branding**: Subtle British Racing Green styling with Plasma logo elements
 - **Team Gallery**: Save and browse figurines created by the team
 - **High Quality**: 1024x1024 PNG images perfect for profiles and sharing
+- **Magic Link Auth**: Only @plasma.to team members can access (via email magic link)
 
 ## Quick Start
 
@@ -27,11 +28,17 @@ npm install
 Create a `.env.local` file:
 
 ```bash
-# Google AI Studio API Key (required)
-GEMINI_API_KEY=your_api_key_here
-```
+# Required
+GEMINI_API_KEY=your_gemini_api_key
+AUTH_SECRET=your_auth_secret_32_chars
+AUTH_RESEND_KEY=your_resend_api_key
 
-Get your Gemini API key at: https://aistudio.google.com/apikey
+# Optional (for persistent gallery)
+KV_REST_API_URL=your_upstash_url
+KV_REST_API_TOKEN=your_upstash_token
+# OR
+BLOB_READ_WRITE_TOKEN=your_vercel_blob_token
+```
 
 ### 3. Run Locally
 
@@ -41,146 +48,131 @@ npm run dev
 
 Open http://localhost:3000
 
-## Deploy to Vercel
+## Production Setup (Complete)
 
-### One-Click Deploy
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/plasma/figurine-generator&env=GEMINI_API_KEY&envDescription=Google%20Gemini%20API%20key%20for%20image%20generation&envLink=https://aistudio.google.com/apikey)
-
-### Manual Deploy
-
-1. Push to GitHub
-2. Import to Vercel: https://vercel.com/new
-3. Add environment variable: `GEMINI_API_KEY`
-4. Deploy!
-
-## Adding Persistent Gallery Storage (Optional)
-
-The gallery works in-memory by default. For persistent storage across deployments, add Upstash Redis:
-
-### Option 1: Via Vercel Dashboard (Easiest)
-
-1. Go to your Vercel project dashboard
-2. Navigate to **Storage** tab
-3. Click **Browse Marketplace** → Search "Upstash"
-4. Select **Upstash for Redis** → **Add Integration**
-5. Follow prompts to create a free database
-6. Environment variables are automatically added
-
-### Option 2: Via Upstash Console
-
-1. Sign up at https://console.upstash.com
-2. Create a new Redis database (free tier available)
-3. Copy the REST URL and Token
-4. Add to Vercel environment variables:
-   - `KV_REST_API_URL` = Your Upstash REST URL
-   - `KV_REST_API_TOKEN` = Your Upstash REST Token
-
-### Option 3: Via CLI
+### Step 1: Deploy to Vercel
 
 ```bash
-# Install Upstash CLI
-npm install -g @upstash/cli
-
-# Login
-upstash auth login --email your@email.com
-
-# Create database
-upstash redis create figurines-gallery --region us-east-1
-
-# Copy the credentials and add to Vercel
+npx vercel --prod
 ```
 
-## Environment Variables
+### Step 2: Add Required Environment Variables
+
+Add these to your Vercel project (Settings → Environment Variables):
+
+| Variable | Required | How to Get |
+|----------|----------|------------|
+| `GEMINI_API_KEY` | Yes | [Google AI Studio](https://aistudio.google.com/apikey) |
+| `AUTH_SECRET` | Yes | Run: `openssl rand -base64 32` |
+| `AUTH_RESEND_KEY` | Yes | [Resend Dashboard](https://resend.com/api-keys) |
+
+### Step 3: Set Up Resend (Magic Link Emails)
+
+1. Create account at [resend.com](https://resend.com)
+2. Add and verify your domain (plasma.to)
+3. Create API key → Copy to `AUTH_RESEND_KEY`
+
+**Domain Setup:**
+- Go to Domains → Add Domain → plasma.to
+- Add the DNS records shown in Resend to your domain
+- Wait for verification (usually minutes)
+
+### Step 4: Add Persistent Gallery Storage
+
+**Option A: Vercel Blob (Recommended)**
+```bash
+# In project directory
+npx vercel blob store add figurines-gallery
+# Link to project when prompted
+# BLOB_READ_WRITE_TOKEN is auto-added
+```
+
+**Option B: Upstash Redis**
+1. Go to [console.upstash.com](https://console.upstash.com)
+2. Create Redis database
+3. Copy REST URL and Token to Vercel env vars:
+   - `KV_REST_API_URL`
+   - `KV_REST_API_TOKEN`
+
+### Step 5: Redeploy
+
+```bash
+npx vercel --prod
+```
+
+## Environment Variables Summary
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | Yes | Google AI Studio API key for Gemini 2.5 Flash Image |
-| `KV_REST_API_URL` | No | Upstash Redis REST URL (for persistent gallery) |
-| `KV_REST_API_TOKEN` | No | Upstash Redis REST token (for persistent gallery) |
+| `GEMINI_API_KEY` | Yes | Google AI Studio API key |
+| `AUTH_SECRET` | Yes | NextAuth secret (32+ chars) |
+| `AUTH_RESEND_KEY` | Yes | Resend API key for magic links |
+| `KV_REST_API_URL` | No* | Upstash Redis URL |
+| `KV_REST_API_TOKEN` | No* | Upstash Redis token |
+| `BLOB_READ_WRITE_TOKEN` | No* | Vercel Blob token |
+
+*At least one storage option recommended for persistent gallery
+
+## Authentication
+
+The app uses magic link authentication restricted to @plasma.to emails:
+
+1. User enters their @plasma.to email
+2. Magic link sent via Resend
+3. Click link to sign in
+4. Session maintained via cookies
+
+Non-plasma.to emails are rejected at sign-in.
 
 ## API Endpoints
 
 ### POST /api/generate
-
 Generate a figurine from a photo.
 
-**Request Body:**
-```json
-{
-  "image": "data:image/jpeg;base64,...",
-  "name": "John Doe",
-  "activity": "working at a laptop",
-  "customPrompt": "wearing glasses"
-}
-```
-
-**Response:**
-```json
-{
-  "images": ["data:image/png;base64,..."]
-}
-```
-
 ### GET /api/gallery
-
 Fetch all saved figurines.
 
 ### POST /api/gallery
-
 Save a figurine to the gallery.
+
+### GET/POST /api/auth/*
+NextAuth authentication endpoints.
 
 ## Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
+- **Auth**: NextAuth.js v5 with Resend magic links
 - **Styling**: Tailwind CSS
-- **AI**: Google Gemini 2.5 Flash Image (Nano Banana)
-- **Storage**: Upstash Redis (optional)
+- **AI**: Google Gemini 2.5 Flash Image
+- **Storage**: Upstash Redis or Vercel Blob
 - **Deployment**: Vercel
 
 ## Brand Colors
 
-The figurines use Plasma's brand colors from [plasma.to/brand](https://plasma.to/brand):
+From [plasma.to/brand](https://plasma.to/brand):
 
 - **British Racing Green**: #162F29 (primary)
 - **Light Green**: #DCEFEA (background)
 - **Accent**: #295B4F (secondary)
 
-## Customization
-
-### Adding More Activities
-
-Edit `src/components/PromptSection.tsx` and add to the `PRESET_ACTIVITIES` array:
-
-```typescript
-const PRESET_ACTIVITIES = [
-  { value: "your custom activity", label: "Label", emoji: "🎯" },
-  // ...
-];
-```
-
-### Modifying the Prompt
-
-Edit `src/app/api/generate/route.ts` to customize the generation prompt, outfit descriptions, or branding elements.
-
 ## Troubleshooting
 
-### "No image generated"
-- Check your Gemini API key is valid
-- Try a different photo or activity
-- Some content may be blocked by safety filters
+### "Only @plasma.to emails can access"
+- This is intentional - only team members can use the app
+
+### Magic link not received
+- Check spam folder
+- Verify Resend domain is set up correctly
+- Check `AUTH_RESEND_KEY` is valid
 
 ### Gallery not persisting
-- Add Upstash Redis for persistent storage
-- Without Redis, gallery resets on each deployment
+- Add Upstash Redis or Vercel Blob storage
+- Check environment variables are set
 
-### Generation taking too long
-- Gemini image generation typically takes 10-30 seconds
-- Function timeout is set to 60 seconds
-
-## License
-
-MIT - Feel free to use and modify for your team!
+### "No image generated"
+- Verify `GEMINI_API_KEY` is valid
+- Try a different photo/activity
+- Check Vercel function logs for errors
 
 ---
 
