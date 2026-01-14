@@ -1,5 +1,7 @@
 import { PostHog } from "posthog-node";
 
+const APP_NAME = "Plasma Figurine Generator";
+
 let posthogClient: PostHog | null = null;
 
 export function getPostHogServer(): PostHog | null {
@@ -10,7 +12,7 @@ export function getPostHogServer(): PostHog | null {
   if (!posthogClient) {
     posthogClient = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
       host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
-      flushAt: 1, // Flush immediately for serverless
+      flushAt: 1,
       flushInterval: 0,
     });
   }
@@ -30,6 +32,8 @@ export async function trackServerEvent(
       event,
       properties: {
         ...properties,
+        app: APP_NAME,
+        app_version: "1.0.0",
         $lib: "posthog-node",
         environment: process.env.NODE_ENV,
       },

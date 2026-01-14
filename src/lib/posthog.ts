@@ -1,5 +1,7 @@
 import posthog from "posthog-js";
 
+const APP_NAME = "Plasma Figurine Generator";
+
 export const initPostHog = () => {
   if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
@@ -10,7 +12,6 @@ export const initPostHog = () => {
       session_recording: {
         maskAllInputs: false,
         maskInputFn: (text, element) => {
-          // Don't mask email inputs for better debugging
           if (element?.getAttribute("type") === "email") {
             return text;
           }
@@ -18,6 +19,11 @@ export const initPostHog = () => {
         },
       },
       loaded: (posthog) => {
+        // Register app name as a super property so it's included in all events
+        posthog.register({
+          app: APP_NAME,
+          app_version: "1.0.0",
+        });
         if (process.env.NODE_ENV === "development") {
           posthog.debug();
         }
