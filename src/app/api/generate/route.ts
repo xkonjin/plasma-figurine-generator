@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       customPrompt || ""
     );
 
-    // Build request with image reference and logo
+    // Build request with image reference only (simplified for reliability)
     const requestBody = {
       contents: [
         {
@@ -98,19 +98,7 @@ export async function POST(request: NextRequest) {
               },
             },
             {
-              text: `This is a photo of ${name || "the person"}. Use their likeness (face, hair, general appearance) for the figurine.`,
-            },
-            {
-              inlineData: {
-                mimeType: "image/png",
-                data: PLASMA_LOGO_BASE64,
-              },
-            },
-            {
-              text: "This is the Plasma logo - a white spiral/swirl design on dark green background. Subtly integrate this exact logo design into the figurine.",
-            },
-            {
-              text: prompt,
+              text: `This is a photo of ${name || "the person"}. Use their likeness (face, hair, general appearance) for the figurine. ${prompt}`,
             },
           ],
         },
