@@ -6,6 +6,9 @@ const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/
 // Plasma brand colors
 const PLASMA_GREEN = "#162F29";
 
+// Plasma logo description for AI integration
+const PLASMA_LOGO_DESCRIPTION = `The Plasma logo is a circular spiral symbol - an elegant organic swirl pattern that flows from the center outward, similar to a stylized "P" made of curved concentric arcs. It's subtle, modern, and organic-looking - NOT a generic "P" letter, but a distinctive spiral/swirl mark.`;
+
 function buildPrompt(activity: string, customPrompt: string): string {
   const basePrompt = `Create a miniature, full-body, isometric, hyper-realistic figurine of this person.
 
@@ -23,9 +26,16 @@ OUTFIT (subtle Plasma branding):
 - Well-fitted dark navy or charcoal pants
 - Modern, professional-casual style
 
-SUBTLE BRANDING (very minimal):
-- A tiny "P" logo or Plasma symbol visible somewhere natural (laptop sticker, coffee mug, small pin)
-- The green color should feel natural, not corporate
+PLASMA LOGO INTEGRATION (subtle and tasteful):
+${PLASMA_LOGO_DESCRIPTION}
+- Include this spiral logo mark in ONE subtle location that feels natural to the scene:
+  * Small embroidered or printed logo on the chest of the sweater/jacket (like a small brand logo)
+  * OR as a tiny sticker on a laptop, phone, or notebook if present
+  * OR as a subtle design element on a coffee mug or water bottle
+  * OR as a small pin/badge on the clothing
+- The logo should be small, elegant, and NOT overpowering - it should feel like a natural brand detail
+- Use white or light sage green for the logo mark against the dark green clothing
+- Keep it proportional and realistic - as if it's real embroidery or print
 
 MOOD: Warm, approachable, professional yet relaxed - like a talented person who loves what they do.
 
