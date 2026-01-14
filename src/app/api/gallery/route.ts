@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { kv } from "@vercel/kv";
 import { v4 as uuidv4 } from "uuid";
+import { getStorage } from "@/lib/storage";
 
 interface GalleryItem {
   id: string;
@@ -13,31 +13,18 @@ interface GalleryItem {
 const GALLERY_KEY = "plasma-figurines:gallery";
 const MAX_GALLERY_ITEMS = 100;
 
-// Check if KV is configured
-function isKVConfigured(): boolean {
-  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
-}
-
-// In-memory fallback for development
-let memoryGallery: GalleryItem[] = [];
-
 export async function GET() {
   try {
-    let items: GalleryItem[] = [];
-
-    if (isKVConfigured()) {
-      items = (await kv.get<GalleryItem[]>(GALLERY_KEY)) || [];
-    } else {
-      items = memoryGallery;
-    }
-
+    const storage = await getStorage();
+    const items = await storage.get<GalleryItem[]>(GALLERY_KEY) || [];
+    
     // Sort by newest first
     items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
+    
     return NextResponse.json({ items });
   } catch (error) {
     console.error("Gallery fetch error:", error);
-    return NextResponse.json({ items: memoryGallery });
+    return NextResponse.json({ items: [] });
   }
 }
 
@@ -61,23 +48,17 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
-    if (isKVConfigured()) {
-      let items = (await kv.get<GalleryItem[]>(GALLERY_KEY)) || [];
-      items.unshift(newItem);
+    const storage = await getStorage();
+    let items = await storage.get<GalleryItem[]>(GALLERY_KEY) || [];
+    
+    items.unshift(newItem);
 
-      // Keep only the most recent items
-      if (items.length > MAX_GALLERY_ITEMS) {
-        items = items.slice(0, MAX_GALLERY_ITEMS);
-      }
-
-      await kv.set(GALLERY_KEY, items);
-    } else {
-      // In-memory fallback
-      memoryGallery.unshift(newItem);
-      if (memoryGallery.length > MAX_GALLERY_ITEMS) {
-        memoryGallery = memoryGallery.slice(0, MAX_GALLERY_ITEMS);
-      }
+    // Keep only the most recent items
+    if (items.length > MAX_GALLERY_ITEMS) {
+      items = items.slice(0, MAX_GALLERY_ITEMS);
     }
+
+    await storage.set(GALLERY_KEY, items);
 
     return NextResponse.json({ success: true, item: newItem });
   } catch (error) {
