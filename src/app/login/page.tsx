@@ -1,12 +1,24 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "InvalidLink") {
+      setError("Invalid magic link. Please request a new one.");
+    } else if (errorParam === "InvalidOrExpired") {
+      setError("Magic link has expired. Please request a new one.");
+    } else if (errorParam === "VerificationFailed") {
+      setError("Verification failed. Please try again.");
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,14 +33,16 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await signIn("resend", {
-        email,
-        redirect: false,
-        callbackUrl: "/",
+      const response = await fetch("/api/auth/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
 
-      if (result?.error) {
-        setError("Failed to send magic link. Please try again.");
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Failed to send magic link");
       } else {
         // Redirect to verify page
         window.location.href = "/verify";
@@ -124,5 +138,19 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f8faf9] to-[#e8f0ed]">
+        <div className="w-16 h-16 rounded-2xl plasma-green flex items-center justify-center text-white text-2xl font-bold shadow-lg animate-pulse">
+          P
+        </div>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
