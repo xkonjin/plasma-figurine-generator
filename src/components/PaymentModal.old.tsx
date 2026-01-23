@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useSignTypedData, useConnect } from 'wagmi';
+import { useAccount, useSignTypedData } from 'wagmi';
 import { getEIP3009Domain, EIP3009_TYPES, fromAtomicUnits } from '@/lib/plasma-config';
 import type { PaymentRequired, PaymentOption } from '@/lib/payment-middleware';
 
@@ -20,13 +20,11 @@ export default function PaymentModal({
 }: PaymentModalProps) {
   const { address, isConnected } = useAccount();
   const { signTypedDataAsync } = useSignTypedData();
-  const { connect, connectors } = useConnect();
   
   const [selectedOption, setSelectedOption] = useState<PaymentOption | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'signing' | 'verifying' | 'complete'>('idle');
-  const [paymentMethod, setPaymentMethod] = useState<'wallet' | 'lifi'>('wallet');
 
   useEffect(() => {
     if (paymentRequired && paymentRequired.paymentOptions.length > 0) {
@@ -35,19 +33,6 @@ export default function PaymentModal({
   }, [paymentRequired]);
 
   if (!isOpen || !paymentRequired) return null;
-
-  const handleWalletConnect = async () => {
-    try {
-      // Try to connect with injected connector (MetaMask, Rabby, etc.)
-      const injectedConnector = connectors.find(c => c.id === 'injected');
-      if (injectedConnector) {
-        await connect({ connector: injectedConnector });
-      }
-    } catch (err) {
-      console.error('Wallet connection error:', err);
-      setError('Failed to connect wallet. Please make sure you have MetaMask or Rabby installed.');
-    }
-  };
 
   const handlePayment = async () => {
     if (!selectedOption || !address) return;
@@ -115,23 +100,13 @@ export default function PaymentModal({
     }
   };
 
-  const handleLiFiPayment = () => {
-    // Open LiFi widget in new window for cross-chain payment
-    const lifiUrl = `https://jumper.exchange/?fromChain=1&toChain=9745&toToken=0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb&toAmount=${selectedOption?.amount || '100000'}&toAddress=${selectedOption?.recipient || ''}`;
-    window.open(lifiUrl, '_blank', 'width=420,height=720');
-    
-    // Show instructions
-    setError(null);
-    setStatus('verifying');
-  };
-
   const totalAmount = selectedOption 
     ? BigInt(selectedOption.amount) + BigInt(selectedOption.feeBreakdown.totalFee)
     : BigInt(0);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">Payment Required</h2>
           <button
@@ -173,39 +148,6 @@ export default function PaymentModal({
           )}
         </div>
 
-        {/* Payment Method Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Choose Payment Method
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setPaymentMethod('wallet')}
-              className={`p-4 border-2 rounded-lg text-center transition-all ${
-                paymentMethod === 'wallet'
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="text-2xl mb-2">🦊</div>
-              <div className="font-medium text-sm">Browser Wallet</div>
-              <div className="text-xs text-gray-500 mt-1">MetaMask, Rabby, etc.</div>
-            </button>
-            <button
-              onClick={() => setPaymentMethod('lifi')}
-              className={`p-4 border-2 rounded-lg text-center transition-all ${
-                paymentMethod === 'lifi'
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="text-2xl mb-2">🔄</div>
-              <div className="font-medium text-sm">Any Token</div>
-              <div className="text-xs text-gray-500 mt-1">Cross-chain swap</div>
-            </button>
-          </div>
-        </div>
-
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             {error}
@@ -218,56 +160,27 @@ export default function PaymentModal({
           </div>
         )}
 
-        {status === 'verifying' && paymentMethod === 'lifi' && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
-            <p className="font-medium mb-2">Complete payment in the LiFi window</p>
-            <p className="text-xs">After completing the payment, return here and click "I've Paid" to verify.</p>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        {paymentMethod === 'wallet' && (
-          <>
-            {!isConnected ? (
-              <button
-                onClick={handleWalletConnect}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Connect Wallet
-              </button>
-            ) : (
-              <button
-                onClick={handlePayment}
-                disabled={isProcessing || !selectedOption}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-              >
-                {status === 'signing' && 'Sign Payment...'}
-                {status === 'verifying' && 'Verifying Payment...'}
-                {status === 'complete' && 'Payment Complete ✓'}
-                {status === 'idle' && !isProcessing && 'Pay with USDT0'}
-              </button>
-            )}
-          </>
-        )}
-
-        {paymentMethod === 'lifi' && (
-          <div className="space-y-3">
+        {!isConnected ? (
+          <div className="text-center py-4">
+            <p className="text-gray-600 mb-4">Please connect your wallet to continue</p>
             <button
-              onClick={handleLiFiPayment}
-              disabled={isProcessing}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              onClick={() => window.open('https://plasma.to/wallet', '_blank')}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
-              Open LiFi Payment
+              Connect Wallet
             </button>
-            {status === 'verifying' && (
-              <button
-                onClick={handlePayment}
-                className="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
-              >
-                I've Paid - Verify Now
-              </button>
-            )}
           </div>
+        ) : (
+          <button
+            onClick={handlePayment}
+            disabled={isProcessing || !selectedOption}
+            className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {status === 'signing' && 'Sign Payment...'}
+            {status === 'verifying' && 'Verifying Payment...'}
+            {status === 'complete' && 'Payment Complete ✓'}
+            {status === 'idle' && !isProcessing && 'Pay with USDT0'}
+          </button>
         )}
 
         <p className="text-xs text-gray-500 text-center mt-4">
