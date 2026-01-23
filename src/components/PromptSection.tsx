@@ -38,13 +38,13 @@ export function PromptSection({
 }: PromptSectionProps) {
   return (
     <div className="bg-white rounded-2xl p-6 shadow-lg space-y-5">
-      <h2 className="text-xl font-medium plasma-green-text">
+      <h2 className="text-xl font-medium text-gray-800">
         2. Customize Your Figurine
       </h2>
 
       {/* Name Input */}
       <div>
-        <label className="block text-sm font-medium text-[#295B4F] mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Your Name
         </label>
         <input
@@ -52,13 +52,13 @@ export function PromptSection({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter your name"
-          className="w-full px-4 py-3 border border-[#569F8C]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#295B4F] focus:border-transparent transition-all"
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
         />
       </div>
 
       {/* Activity Selection */}
       <div>
-        <label className="block text-sm font-medium text-[#295B4F] mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Activity / Pose
         </label>
         <div className="grid grid-cols-4 gap-2 mb-3">
@@ -68,8 +68,8 @@ export function PromptSection({
               onClick={() => setActivity(preset.value)}
               className={`p-2 rounded-lg text-center transition-all ${
                 activity === preset.value
-                  ? "plasma-green text-white"
-                  : "bg-[#DCEFEA] text-[#295B4F] hover:bg-[#569F8C]/20"
+                  ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
               <span className="text-lg block">{preset.emoji}</span>
@@ -82,13 +82,13 @@ export function PromptSection({
           value={activity}
           onChange={(e) => setActivity(e.target.value)}
           placeholder="Or type a custom activity..."
-          className="w-full px-4 py-3 border border-[#569F8C]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#295B4F] focus:border-transparent transition-all"
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
         />
       </div>
 
       {/* Custom Prompt */}
       <div>
-        <label className="block text-sm font-medium text-[#295B4F] mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Additional Details (Optional)
         </label>
         <textarea
@@ -96,11 +96,8 @@ export function PromptSection({
           onChange={(e) => setCustomPrompt(e.target.value)}
           placeholder="Add any extra details... e.g., 'wearing glasses', 'with a pet dog', 'at the beach'"
           rows={3}
-          className="w-full px-4 py-3 border border-[#569F8C]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#295B4F] focus:border-transparent transition-all resize-none"
+          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
         />
-        <p className="text-xs text-[#569F8C] mt-2">
-          Your figurine will automatically include subtle Plasma branding (green outfit, logo elements)
-        </p>
       </div>
     </div>
   );

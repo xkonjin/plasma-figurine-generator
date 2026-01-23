@@ -141,8 +141,8 @@ export default function Home() {
         {!isPlasmaUser && (
           <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-xl">
             <p className="text-sm">
-              <strong>Note:</strong> Figurine generation costs {process.env.NEXT_PUBLIC_FIGURINE_PRICE || "0.10"} USDT0 on Plasma. 
-              Plasma team members get free access.
+              <strong>Note:</strong> Figurine generation costs {process.env.NEXT_PUBLIC_FIGURINE_PRICE || "0.10"} USDT0. 
+              Pay with any token via cross-chain swap.
             </p>
           </div>
         )}
@@ -177,7 +177,7 @@ export default function Home() {
                 <p className="text-sm text-gray-600 mb-4">
                   Upload your brand logo to include it in the figurine. If not provided, a generic design will be used.
                 </p>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-plasma-green transition-colors">
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-500 transition-colors">
                   <input
                     type="file"
                     accept="image/*"
@@ -218,7 +218,9 @@ export default function Home() {
               className={`w-full py-4 px-6 rounded-xl font-medium text-white transition-all ${
                 isGenerating || !uploadedImage
                   ? "bg-gray-400 cursor-not-allowed"
-                  : "plasma-green hover:opacity-90 hover:scale-[1.02]"
+                  : isPlasmaUser 
+                    ? "plasma-green hover:opacity-90 hover:scale-[1.02]"
+                    : "bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 hover:scale-[1.02]"
               } ${isGenerating ? "generating" : ""}`}
             >
               {isGenerating ? (
@@ -244,8 +246,8 @@ export default function Home() {
           />
         </div>
 
-        {/* Gallery Section */}
-        <GallerySection key={galleryRefreshKey} />
+        {/* Gallery Section - Only for logged-in users */}
+        {session && <GallerySection key={galleryRefreshKey} />}
       </div>
 
       {/* Payment Modal */}

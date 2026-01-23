@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 
 export function Header() {
   const { data: session } = useSession();
+  const isPlasmaUser = session?.user?.email?.endsWith("@plasma.to");
 
   return (
     <header className="py-8 mb-8">
@@ -11,16 +12,35 @@ export function Header() {
         <div className="flex-1" />
         
         <div className="text-center flex-1">
-          <div className="w-20 h-20 mx-auto mb-6 plasma-green rounded-2xl flex items-center justify-center shadow-lg">
-            <span className="text-white text-3xl font-bold">P</span>
-          </div>
-          <h1 className="text-4xl font-semibold plasma-green-text mb-3">
-            Plasma Figurine Generator
-          </h1>
-          <p className="text-[#295B4F] text-lg max-w-xl mx-auto">
-            Create your personalized isometric miniature figurine with your brand.
-            Upload a photo, your logo, customize your pose, and generate!
-          </p>
+          {isPlasmaUser ? (
+            // Plasma branding for logged-in Plasma users
+            <>
+              <div className="w-20 h-20 mx-auto mb-6 plasma-green rounded-2xl flex items-center justify-center shadow-lg">
+                <span className="text-white text-3xl font-bold">P</span>
+              </div>
+              <h1 className="text-4xl font-semibold plasma-green-text mb-3">
+                Plasma Figurine Generator
+              </h1>
+              <p className="text-[#295B4F] text-lg max-w-xl mx-auto">
+                Create your personalized isometric miniature figurine with Plasma branding.
+                Upload a photo, customize your pose, and generate!
+              </p>
+            </>
+          ) : (
+            // Generic branding for anonymous/external users
+            <>
+              <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <span className="text-white text-3xl font-bold">✨</span>
+              </div>
+              <h1 className="text-4xl font-semibold text-gray-800 mb-3">
+                Brand Figurine Generator
+              </h1>
+              <p className="text-gray-600 text-lg max-w-xl mx-auto">
+                Create your personalized isometric miniature figurine with your brand.
+                Upload a photo, your logo, customize your pose, and generate!
+              </p>
+            </>
+          )}
         </div>
 
         <div className="flex-1 flex justify-end">
