@@ -1,30 +1,20 @@
+import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 import { paymentMiddleware } from "./lib/payment-middleware";
 
-const AUTH_SECRET = process.env.AUTH_SECRET;
-
-export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: AUTH_SECRET });
-  const isLoggedIn = !!token;
-  
+export default auth(async (req) => {
+  const isLoggedIn = !!req.auth;
   const isAuthPage =
     req.nextUrl.pathname.startsWith("/login") ||
     req.nextUrl.pathname.startsWith("/verify") ||
     req.nextUrl.pathname.startsWith("/api/auth");
 
-  // Allow auth pages
+  // Allow auth pages and API routes
   if (isAuthPage) {
     // Redirect logged-in users away from login page
     if (isLoggedIn && req.nextUrl.pathname === "/login") {
       return NextResponse.redirect(new URL("/", req.url));
     }
-    return NextResponse.next();
-  }
-
-  // Allow anonymous access to root path
-  if (req.nextUrl.pathname === "/") {
     return NextResponse.next();
   }
 
@@ -38,13 +28,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow payment API routes
-  if (req.nextUrl.pathname.startsWith("/api/payment")) {
-    return NextResponse.next();
-  }
-
-  // Allow gallery API routes (for now, can be protected later)
-  if (req.nextUrl.pathname.startsWith("/api/gallery")) {
+  // Allow anonymous access to home page
+  if (req.nextUrl.pathname === "/") {
     return NextResponse.next();
   }
 
@@ -56,11 +41,12 @@ export async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
-    // Match all routes except static files
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    // Match all routes except static files, API routes, and root path
+    "/((?!_next/static|_next/image|favicon.ico|api/generate|api/gallery|api/payment|^$).*)",
+    "/api/generate",
   ],
 };
