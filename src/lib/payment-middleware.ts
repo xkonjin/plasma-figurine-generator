@@ -4,8 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { v4 as uuidv4 } from 'uuid';
-import { PLASMA_CONFIG, calculateProtocolFee, toAtomicUnits } from './plasma-config';
-import { getFigurineCost, calculateTotalCost, logCostBreakdown } from './cost-calculator';
+import { PLASMA_CONFIG, calculateProtocolFee } from './plasma-config';
+import { calculateTotalCost, logCostBreakdown } from './cost-calculator';
 
 const AUTH_SECRET = process.env.AUTH_SECRET;
 
@@ -96,7 +96,7 @@ function buildPaymentRequired(amountAtomic: bigint, description: string): Paymen
   const deadline = now + PLASMA_CONFIG.DEFAULT_DEADLINE_SECS;
   const invoiceId = uuidv4();
 
-  const { feeAmount, totalAmount } = calculateProtocolFee(amountAtomic);
+  const { feeAmount } = calculateProtocolFee(amountAtomic);
 
   const plasmaOption: PaymentOption = {
     network: 'plasma',

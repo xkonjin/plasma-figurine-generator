@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount, useSignTypedData } from 'wagmi';
-import { PLASMA_CONFIG, getEIP3009Domain, EIP3009_TYPES, fromAtomicUnits } from '@/lib/plasma-config';
+import { getEIP3009Domain, EIP3009_TYPES, fromAtomicUnits } from '@/lib/plasma-config';
 import type { PaymentRequired, PaymentOption } from '@/lib/payment-middleware';
 
 interface PaymentModalProps {

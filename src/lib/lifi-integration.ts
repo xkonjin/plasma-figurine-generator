@@ -200,7 +200,7 @@ export async function getTokensForChain(chainId: number): Promise<Token[]> {
 // Execute a swap using LiFi
 export async function executeLiFiSwap(
   quote: LiFiQuoteResponse,
-  userAddress: string
+  _userAddress: string
 ): Promise<{ txHash: string; status: string }> {
   if (!quote.transactionRequest) {
     throw new Error('No transaction request in quote');

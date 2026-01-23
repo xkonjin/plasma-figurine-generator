@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { confirmInvoice, getInvoiceStatus } from '@/lib/payment-middleware';
 import { ethers } from 'ethers';
-import { PLASMA_CONFIG, getEIP3009Domain, EIP3009_TYPES } from '@/lib/plasma-config';
+import { getEIP3009Domain, EIP3009_TYPES } from '@/lib/plasma-config';
 
 export async function POST(req: NextRequest) {
   try {
