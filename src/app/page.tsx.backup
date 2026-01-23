@@ -1,16 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useSession } from "next-auth/react";
 import { Header } from "@/components/Header";
 import { UploadSection } from "@/components/UploadSection";
 import { PromptSection } from "@/components/PromptSection";
 import { GenerationPreview } from "@/components/GenerationPreview";
 import { GallerySection } from "@/components/GallerySection";
-import { PaymentModal } from "@/components/PaymentModal";
 
 export default function Home() {
-  const { data: session } = useSession();
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [name, setName] = useState("");
@@ -21,10 +18,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [savedToGallery, setSavedToGallery] = useState(false);
   const [galleryRefreshKey, setGalleryRefreshKey] = useState(0);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
-
-  const isPlasmaUser = session?.user?.email?.endsWith("@plasma.to");
 
   const handleImageUpload = useCallback((file: File) => {
     setUploadedFile(file);
@@ -66,14 +59,6 @@ export default function Home() {
 
       const data = await response.json();
 
-      // Handle 402 Payment Required
-      if (response.status === 402) {
-        setPaymentInvoiceId(data.invoiceId);
-        setShowPaymentModal(true);
-        setIsGenerating(false);
-        return;
-      }
-
       if (!response.ok) {
         throw new Error(data.error || "Generation failed");
       }
@@ -88,12 +73,6 @@ export default function Home() {
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const handlePaymentComplete = async () => {
-    setShowPaymentModal(false);
-    // Retry generation after payment
-    await handleGenerate();
   };
 
   const handleSaveToGallery = async (imageUrl: string) => {
@@ -113,7 +92,7 @@ export default function Home() {
       }
 
       setSavedToGallery(true);
-      setGalleryRefreshKey(prev => prev + 1);
+      setGalleryRefreshKey(prev => prev + 1); // Trigger gallery refresh
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
     }
@@ -124,16 +103,6 @@ export default function Home() {
       <Header />
       
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Show info banner for non-plasma users */}
-        {!isPlasmaUser && (
-          <div className="mb-6 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-xl">
-            <p className="text-sm">
-              <strong>Note:</strong> Figurine generation costs {process.env.NEXT_PUBLIC_FIGURINE_PRICE || "0.10"} USDT0 on Plasma. 
-              Plasma team members get free access.
-            </p>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Left Column - Upload & Settings */}
           <div className="space-y-6">
@@ -198,15 +167,6 @@ export default function Home() {
         {/* Gallery Section */}
         <GallerySection key={galleryRefreshKey} />
       </div>
-
-      {/* Payment Modal */}
-      {showPaymentModal && paymentInvoiceId && (
-        <PaymentModal
-          invoiceId={paymentInvoiceId}
-          onClose={() => setShowPaymentModal(false)}
-          onPaymentComplete={handlePaymentComplete}
-        />
-      )}
     </main>
   );
 }

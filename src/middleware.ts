@@ -28,6 +28,11 @@ export default auth(async (req) => {
     return NextResponse.next();
   }
 
+  // Allow anonymous access to home page
+  if (req.nextUrl.pathname === "/") {
+    return NextResponse.next();
+  }
+
   // Protect all other routes
   if (!isLoggedIn) {
     const loginUrl = new URL("/login", req.url);
