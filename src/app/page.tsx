@@ -7,7 +7,7 @@ import { UploadSection } from "@/components/UploadSection";
 import { PromptSection } from "@/components/PromptSection";
 import { GenerationPreview } from "@/components/GenerationPreview";
 import { GallerySection } from "@/components/GallerySection";
-import { PaymentModal } from "@/components/PaymentModal";
+import PaymentModal from "@/components/PaymentModal";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -22,7 +22,7 @@ export default function Home() {
   const [savedToGallery, setSavedToGallery] = useState(false);
   const [galleryRefreshKey, setGalleryRefreshKey] = useState(0);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string | null>(null);
+  const [paymentRequired, setPaymentRequired] = useState<any | null>(null);
 
   const isPlasmaUser = session?.user?.email?.endsWith("@plasma.to");
 
@@ -68,7 +68,7 @@ export default function Home() {
 
       // Handle 402 Payment Required
       if (response.status === 402) {
-        setPaymentInvoiceId(data.invoiceId);
+        setPaymentRequired(data);
         setShowPaymentModal(true);
         setIsGenerating(false);
         return;
@@ -200,13 +200,15 @@ export default function Home() {
       </div>
 
       {/* Payment Modal */}
-      {showPaymentModal && paymentInvoiceId && (
-        <PaymentModal
-          invoiceId={paymentInvoiceId}
-          onClose={() => setShowPaymentModal(false)}
-          onPaymentComplete={handlePaymentComplete}
-        />
-      )}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        paymentRequired={paymentRequired}
+        onPaymentComplete={(invoiceId, txHash) => {
+          setShowPaymentModal(false);
+          handleGenerate();
+        }}
+      />
     </main>
   );
 }
