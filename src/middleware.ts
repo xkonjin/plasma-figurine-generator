@@ -1,7 +1,8 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { paymentMiddleware } from "./lib/payment-middleware";
 
-export default auth((req) => {
+export default auth(async (req) => {
   const isLoggedIn = !!req.auth;
   const isAuthPage =
     req.nextUrl.pathname.startsWith("/login") ||
@@ -14,6 +15,16 @@ export default auth((req) => {
     if (isLoggedIn && req.nextUrl.pathname === "/login") {
       return NextResponse.redirect(new URL("/", req.url));
     }
+    return NextResponse.next();
+  }
+
+  // Apply payment middleware to /api/generate endpoint
+  if (req.nextUrl.pathname === "/api/generate") {
+    const paymentResponse = await paymentMiddleware(req);
+    if (paymentResponse) {
+      return paymentResponse;
+    }
+    // If payment middleware returns null, continue (plasma.to user or payment confirmed)
     return NextResponse.next();
   }
 
