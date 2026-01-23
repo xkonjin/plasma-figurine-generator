@@ -18,8 +18,8 @@ export function Header() {
             Plasma Figurine Generator
           </h1>
           <p className="text-[#295B4F] text-lg max-w-xl mx-auto">
-            Create your personalized isometric miniature figurine with Plasma branding.
-            Upload a photo, customize your pose, and generate!
+            Create your personalized isometric miniature figurine with your brand.
+            Upload a photo, your logo, customize your pose, and generate!
           </p>
         </div>
 

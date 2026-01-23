@@ -13,6 +13,8 @@ export default function Home() {
   const { data: session } = useSession();
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [brandLogo, setBrandLogo] = useState<string | null>(null);
+  const [brandLogoFile, setBrandLogoFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [activity, setActivity] = useState("");
   const [customPrompt, setCustomPrompt] = useState("");
@@ -35,6 +37,15 @@ export default function Home() {
     reader.readAsDataURL(file);
     setError(null);
     setSavedToGallery(false);
+  }, []);
+
+  const handleBrandLogoUpload = useCallback((file: File) => {
+    setBrandLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setBrandLogo(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
   }, []);
 
   const handleGenerate = async () => {
@@ -61,6 +72,8 @@ export default function Home() {
           name: name.trim(),
           activity: activity || "working at a laptop",
           customPrompt: customPrompt.trim(),
+          brandLogo: brandLogo,
+          usePlasmabranding: isPlasmaUser,
         }),
       });
 
@@ -156,6 +169,42 @@ export default function Home() {
               customPrompt={customPrompt}
               setCustomPrompt={setCustomPrompt}
             />
+
+            {/* Brand Logo Upload - Only for non-Plasma users */}
+            {!isPlasmaUser && (
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h3 className="text-lg font-semibold mb-2">Brand Logo (Optional)</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Upload your brand logo to include it in the figurine. If not provided, a generic design will be used.
+                </p>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-plasma-green transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleBrandLogoUpload(file);
+                    }}
+                    className="hidden"
+                    id="brand-logo-upload"
+                  />
+                  <label htmlFor="brand-logo-upload" className="cursor-pointer">
+                    {brandLogo ? (
+                      <div className="space-y-2">
+                        <img src={brandLogo} alt="Brand logo" className="w-24 h-24 object-contain mx-auto" />
+                        <p className="text-sm text-gray-600">Click to change logo</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="text-4xl">🏢</div>
+                        <p className="text-gray-600">Click to upload your brand logo</p>
+                        <p className="text-xs text-gray-500">PNG, JPG, or SVG (recommended: square, transparent background)</p>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl">

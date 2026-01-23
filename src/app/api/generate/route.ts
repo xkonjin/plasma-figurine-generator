@@ -122,9 +122,20 @@ function getRandomLogoPlacement(): { name: string; instruction: string } {
 
 function buildPrompt(
   activity: string,
-  customPrompt: string
+  customPrompt: string,
+  usePlasmaBranding: boolean = false
 ): { prompt: string; placementName: string } {
   const placement = getRandomLogoPlacement();
+
+  const outfitColor = usePlasmaBranding ? PLASMA_GREEN : "#2C3E50";
+  const brandingInstruction = usePlasmaBranding ? `
+
+${placement.instruction}
+
+PLASMA LOGO DESCRIPTION (for the branding element):
+The Plasma logo is a precise geometric spiral shape. It looks like a stylized hurricane or whirlpool viewed from above - a clean logarithmic spiral that curves elegantly from outer edge to inner center point. The spiral has approximately 3-4 smooth rotations, tapering gradually as it approaches the center. Think of a perfectly geometric Fibonacci spiral or a nautilus shell cross-section. The spiral should be rendered in WHITE or gold/brass/silver depending on the material context. Do NOT make a generic swirl with random curves - this is a precise, mathematical spiral shape.` : `
+
+BRANDING: The figurine should have subtle, professional branding elements that match the uploaded brand logo (if provided). The logo should be incorporated tastefully as a small detail - such as on a lapel pin, necklace pendant, ring, or subtle embroidery. Keep it elegant and not overpowering.`;
 
   const basePrompt = `Create a miniature, full-body, isometric, hyper-realistic 3D collectible figurine of this person.
 
@@ -139,15 +150,10 @@ FIGURINE STYLE:
 - Museum-quality detail and finish
 
 OUTFIT:
-- Dark forest green sweater, hoodie, or casual jacket (color: ${PLASMA_GREEN})
+- Professional sweater, hoodie, or casual jacket (color: ${outfitColor})
 - Well-fitted dark navy or charcoal pants
 - Clean, modern, professional-casual style
-- Quality fabric textures
-
-${placement.instruction}
-
-PLASMA LOGO DESCRIPTION (for the branding element):
-The Plasma logo is a precise geometric spiral shape. It looks like a stylized hurricane or whirlpool viewed from above - a clean logarithmic spiral that curves elegantly from outer edge to inner center point. The spiral has approximately 3-4 smooth rotations, tapering gradually as it approaches the center. Think of a perfectly geometric Fibonacci spiral or a nautilus shell cross-section. The spiral should be rendered in WHITE or gold/brass/silver depending on the material context. Do NOT make a generic swirl with random curves - this is a precise, mathematical spiral shape.
+- Quality fabric textures${brandingInstruction}
 
 MOOD: Warm, approachable, confident - someone who genuinely enjoys their work.
 
@@ -170,7 +176,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { image, name, activity, customPrompt } = body;
+    const { image, name, activity, customPrompt, brandLogo, usePlasmaBranding } = body;
 
     if (!image) {
       return NextResponse.json({ error: "No image provided" }, { status: 400 });
@@ -190,26 +196,69 @@ export async function POST(request: NextRequest) {
 
     const { prompt, placementName } = buildPrompt(
       activity || "working at a laptop",
-      customPrompt || ""
+      customPrompt || "",
+      usePlasmaBranding
     );
 
-    // Build simple single-image request
+    // Build request with user image and optionally brand logo
+    const parts: any[] = [
+      {
+        inlineData: {
+          mimeType,
+          data: imageData,
+        },
+      },
+    ];
+
+    // Add brand logo if provided (for non-Plasma users)
+    if (brandLogo && !usePlasmaBranding) {
+      const logoMatch = brandLogo.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (logoMatch) {
+        parts.push({
+          inlineData: {
+            mimeType: `image/${logoMatch[1]}`,
+            data: logoMatch[2],
+          },
+        });
+      }
+    }
+
+    // Add Plasma logo for Plasma users
+    if (usePlasmaBranding) {
+      const plasmaLogo = await fetchLogoAsBase64();
+      if (plasmaLogo) {
+        parts.push({
+          inlineData: {
+            mimeType: "image/png",
+            data: plasmaLogo,
+          },
+        });
+      }
+    }
+
+    // Add text prompt
+    const textPrompt = usePlasmaBranding 
+      ? `REFERENCE IMAGE 1: Photo of ${name || "the person"} - use their exact face, hair, and skin tone for the figurine.
+REFERENCE IMAGE 2: The Plasma logo - use this exact spiral design for the branding elements.
+
+${prompt}`
+      : brandLogo
+      ? `REFERENCE IMAGE 1: Photo of ${name || "the person"} - use their exact face, hair, and skin tone for the figurine.
+REFERENCE IMAGE 2: The brand logo - incorporate this logo design tastefully into the figurine as described.
+
+${prompt}`
+      : `REFERENCE IMAGE: Photo of ${name || "the person"} - use their exact face, hair, and skin tone for the figurine.
+
+${prompt}`;
+
+    parts.push({
+      text: textPrompt,
+    });
+
     const requestBody = {
       contents: [
         {
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data: imageData,
-              },
-            },
-            {
-              text: `REFERENCE IMAGE: Photo of ${name || "the person"} - use their exact face, hair, and skin tone for the figurine.
-
-${prompt}`,
-            },
-          ],
+          parts,
         },
       ],
       generationConfig: {
