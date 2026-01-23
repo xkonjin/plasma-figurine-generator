@@ -8,5 +8,14 @@
     "src/app/api/generate/route.ts": {
       "maxDuration": 60
     }
+  },
+  "env": {
+    "PLASMA_RPC": "https://rpc.plasma.to",
+    "PLASMA_CHAIN_ID": "9745",
+    "MERCHANT_ADDRESS": "0x03BD07c84B6D9682E238ec865B34bECFE045d09A",
+    "FIGURINE_PRICE": "0.10",
+    "USE_DYNAMIC_PRICING": "true",
+    "ENABLE_RATE_LIMITING": "true",
+    "CORS_ORIGINS": "https://plasma-figurine-generator.vercel.app"
   }
 }

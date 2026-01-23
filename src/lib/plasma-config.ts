@@ -15,7 +15,7 @@ export const PLASMA_CONFIG = {
   USDT0_VERSION: '1',
   
   // Merchant configuration
-  MERCHANT_ADDRESS: process.env.MERCHANT_ADDRESS || '',
+  MERCHANT_ADDRESS: process.env.MERCHANT_ADDRESS || '0x03BD07c84B6D9682E238ec865B34bECFE045d09A',
   
   // Payment configuration
   DEFAULT_DEADLINE_SECS: 600, // 10 minutes
