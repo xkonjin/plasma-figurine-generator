@@ -44,7 +44,7 @@ export function Header() {
         </div>
 
         <div className="flex-1 flex justify-end">
-          {session?.user && (
+          {session?.user ? (
             <div className="flex items-center gap-3">
               <span className="text-sm text-gray-600 hidden sm:block">
                 {session.user.email}
@@ -56,6 +56,13 @@ export function Header() {
                 Sign out
               </button>
             </div>
+          ) : (
+            <a
+              href="/login"
+              className="text-sm bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all shadow-sm"
+            >
+              Login
+            </a>
           )}
         </div>
       </div>
