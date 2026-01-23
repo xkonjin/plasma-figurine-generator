@@ -45,7 +45,8 @@ export default auth(async (req) => {
 
 export const config = {
   matcher: [
-    // Match all routes except static files and API routes (except auth)
-    "/((?!_next/static|_next/image|favicon.ico|api/generate|api/gallery).*)",
+    // Match all routes except static files, API routes, and root path
+    "/((?!_next/static|_next/image|favicon.ico|api/generate|api/gallery|api/payment|^$).*)",
+    "/api/generate",
   ],
 };
