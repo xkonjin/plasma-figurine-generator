@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { trackServerEvent } from "@/lib/posthog-server";
+import { extractBrandColors } from "@/lib/color-extractor";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_API_URL =
@@ -123,11 +124,21 @@ function getRandomLogoPlacement(): { name: string; instruction: string } {
 function buildPrompt(
   activity: string,
   customPrompt: string,
-  usePlasmaBranding: boolean = false
+  usePlasmaBranding: boolean = false,
+  brandColors?: { primary: string; secondary: string; description: string }
 ): { prompt: string; placementName: string } {
   const placement = getRandomLogoPlacement();
 
-  const outfitColor = usePlasmaBranding ? PLASMA_GREEN : "#2C3E50";
+  // Use brand colors if available, otherwise use defaults
+  const outfitColor = usePlasmaBranding 
+    ? PLASMA_GREEN 
+    : (brandColors?.primary || "#2C3E50");
+  
+  const outfitDescription = usePlasmaBranding
+    ? `dark forest green (${PLASMA_GREEN})`
+    : brandColors
+    ? `${brandColors.description} (${brandColors.primary}) that matches the brand logo`
+    : "professional slate blue (#2C3E50)";
   const brandingInstruction = usePlasmaBranding ? `
 
 ${placement.instruction}
@@ -150,10 +161,11 @@ FIGURINE STYLE:
 - Museum-quality detail and finish
 
 OUTFIT:
-- Professional sweater, hoodie, or casual jacket (color: ${outfitColor})
+- Professional sweater, hoodie, or casual jacket in ${outfitDescription}
 - Well-fitted dark navy or charcoal pants
 - Clean, modern, professional-casual style
-- Quality fabric textures${brandingInstruction}
+- Quality fabric textures
+- The outfit color should harmonize with and complement the brand logo${brandingInstruction}
 
 MOOD: Warm, approachable, confident - someone who genuinely enjoys their work.
 
@@ -194,10 +206,22 @@ export async function POST(request: NextRequest) {
     const mimeType = `image/${base64Match[1]}`;
     const imageData = base64Match[2];
 
+    // Extract brand colors if a brand logo is provided
+    let brandColors;
+    if (brandLogo && !usePlasmaBranding) {
+      try {
+        brandColors = await extractBrandColors(brandLogo);
+        console.log('Extracted brand colors:', brandColors);
+      } catch (error) {
+        console.error('Failed to extract colors, using defaults:', error);
+      }
+    }
+
     const { prompt, placementName } = buildPrompt(
       activity || "working at a laptop",
       customPrompt || "",
-      usePlasmaBranding
+      usePlasmaBranding,
+      brandColors
     );
 
     // Build request with user image and optionally brand logo
