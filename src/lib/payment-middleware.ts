@@ -8,6 +8,7 @@ import { PLASMA_CONFIG, calculateProtocolFee } from './plasma-config';
 import { calculateTotalCost, logCostBreakdown } from './cost-calculator';
 
 const AUTH_SECRET = process.env.AUTH_SECRET;
+const ALLOW_INSECURE_PAYMENT = process.env.ALLOW_INSECURE_PAYMENT === 'true';
 
 export interface PaymentOption {
   network: string;
@@ -51,6 +52,14 @@ export async function paymentMiddleware(req: NextRequest): Promise<NextResponse 
   const paymentSignature = req.headers.get('payment-signature');
   
   if (paymentSignature) {
+    if (process.env.NODE_ENV === 'production' && !ALLOW_INSECURE_PAYMENT) {
+      console.warn('Payment verification not configured in production');
+      return NextResponse.json(
+        { error: 'Payment verification not configured' },
+        { status: 402 }
+      );
+    }
+
     // Verify payment (simplified - in production, verify signature on-chain)
     try {
       const paymentData = JSON.parse(Buffer.from(paymentSignature, 'base64').toString('utf-8'));
